@@ -1,1 +1,1 @@
-python -m src/main.py
+python src/main.py
