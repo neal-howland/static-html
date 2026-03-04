@@ -1,6 +1,6 @@
 import unittest
 
-from markdown import markdown_to_html_node
+from markdown import markdown_to_html_node, extract_title
 
 
 class TestMarkdownToHtmlNode(unittest.TestCase):
@@ -229,6 +229,75 @@ class TestMarkdownToHtmlNode(unittest.TestCase):
             result.to_html(),
             "<div><h2>Subtitle</h2><p>Some text here.</p><pre><code>x = 1</code></pre></div>",
         )
+
+
+class TestExtractTitle(unittest.TestCase):
+    # --- Basic h1 extraction ---
+    def test_simple_title(self):
+        self.assertEqual(extract_title("# Hello"), "Hello")
+
+    def test_title_with_spaces(self):
+        self.assertEqual(extract_title("# My Great Title"), "My Great Title")
+
+    def test_title_strips_trailing_whitespace(self):
+        self.assertEqual(extract_title("# Title   "), "Title")
+
+    # --- Title among other content ---
+    def test_title_with_paragraph_after(self):
+        md = "# Title\n\nSome paragraph text."
+        self.assertEqual(extract_title(md), "Title")
+
+    def test_title_with_content_before(self):
+        md = "Some text\n\n# Title\n\nMore text"
+        self.assertEqual(extract_title(md), "Title")
+
+    def test_returns_first_h1_when_multiple(self):
+        md = "# First\n\n# Second"
+        self.assertEqual(extract_title(md), "First")
+
+    def test_title_in_full_document(self):
+        md = "# Doc Title\n\nA paragraph.\n\n## Subtitle\n\nMore text."
+        self.assertEqual(extract_title(md), "Doc Title")
+
+    # --- Ignores non-h1 headings ---
+    def test_h2_is_not_title(self):
+        with self.assertRaises(Exception):
+            extract_title("## Not a title")
+
+    def test_h3_is_not_title(self):
+        with self.assertRaises(Exception):
+            extract_title("### Not a title")
+
+    def test_h6_is_not_title(self):
+        with self.assertRaises(Exception):
+            extract_title("###### Not a title")
+
+    # --- No title raises ---
+    def test_no_heading_raises(self):
+        with self.assertRaises(Exception):
+            extract_title("Just a paragraph with no heading.")
+
+    def test_empty_string_raises(self):
+        with self.assertRaises(Exception):
+            extract_title("")
+
+    def test_only_h2_and_h3_raises(self):
+        md = "## Heading 2\n\n### Heading 3"
+        with self.assertRaises(Exception):
+            extract_title(md)
+
+    # --- Edge cases ---
+    def test_hash_without_space_is_not_title(self):
+        with self.assertRaises(Exception):
+            extract_title("#NoSpace")
+
+    def test_title_on_non_first_line(self):
+        md = "Some intro text\n# The Title"
+        self.assertEqual(extract_title(md), "The Title")
+
+    def test_title_with_inline_content(self):
+        md = "# Title with **bold** word"
+        self.assertEqual(extract_title(md), "Title with **bold** word")
 
 
 if __name__ == "__main__":

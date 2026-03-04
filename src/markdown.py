@@ -13,6 +13,17 @@ def text_to_children(text):
     return children
 
 
+def extract_title(markdown):
+    """
+    Returns the first h1 ('# ') line from the markdown string
+    """
+    lines = markdown.split("\n")
+    for line in lines:
+        if line.startswith("# "):
+            return line.lstrip("# ").strip()
+    raise Exception("No title header found.")
+
+
 def markdown_to_html_node(markdown):
     """
     Converts a full markdown document into a single parent HTMLNode.

@@ -1,11 +1,70 @@
 import os
+from os.path import isfile
 import shutil
+import re
+
+from markdown import markdown_to_html_node, extract_title
+
+
+def generate_page(from_path, template_path, dest_path):
+    """
+    Takes markdown source file from_path and generates html at dest_path using template_path as the template
+    """
+
+    print(f"Generating page from {from_path} to {dest_path} with {template_path}.")
+    with open(from_path, "r") as f:
+        markdown = f.read()
+
+    with open(template_path, "r") as f:
+        template = f.read()
+
+    content = markdown_to_html_node(markdown).to_html()
+    title = extract_title(markdown)
+
+    html = re.sub(r"{{\s*Content\s*}}", content, template)
+    html = re.sub(r"{{\s*Title\s*}}", title, html)
+
+    if not os.path.exists(os.path.dirname(dest_path)):
+        os.makedirs(os.path.dirname(dest_path))
+
+    with open(dest_path, "w") as f:
+        f.write(html)
+
+
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+    print(
+        f"generate_pages_recursive({dir_path_content}, {template_path}, {dest_dir_path})"
+    )
+    if not os.path.exists(dir_path_content):
+        raise Exception(f"Source path {dir_path_content} doesn't exist.")
+    if os.path.isfile(dir_path_content):
+        raise Exception(
+            f"Source path {dir_path_content} is a file, expected a directory."
+        )
+
+    content_files = os.listdir(dir_path_content)
+
+    for file in content_files:
+        source = os.path.join(dir_path_content, file)
+        print(f"  file: {file}")
+        if os.path.isfile(source):
+            print("    is a file")
+            dest = os.path.join(dest_dir_path, re.sub(r"\.md$", ".html", file))
+            generate_page(source, template_path, dest)
+            continue
+        else:
+            print("    is a directory")
+            dest = os.path.join(dest_dir_path, file)
+            os.mkdir(dest)
+            generate_pages_recursive(
+                source,
+                template_path,
+                dest,
+            )
 
 
 def clean_copy(source, target, log_file=None):
-    print(f"==> clean_copy({source}, {target}, {log_file})")
     if os.path.exists(target):
-        print(f"target path exists, deleting: {target}")
         shutil.rmtree(target)
 
     os.mkdir(target)
@@ -21,7 +80,6 @@ def recursive_copy(source, target, log_file=None):
     I recommend logging the path of each file you copy, so you can see what's happening as you run and debug your code.
     """
 
-    print(f"==> recursive_copy({source}, {target}, {log_file})")
     if not os.path.exists(source):
         raise Exception(f"Source '{source}' does not exist.")
     if os.path.isfile(source):
@@ -32,17 +90,13 @@ def recursive_copy(source, target, log_file=None):
         target_path = os.path.join(target, file)
 
         if os.path.isfile(file_path):
-            print(f"    file_path {file_path} is file.")
-            print(f"    copying to {target_path}")
             shutil.copy(file_path, target_path)
             if log_file:
                 with open(log_file, "a") as f:
                     f.write(f"Copied file: {file_path}\n")
                     f.write(f"         to: {target_path}\n")
         else:
-            print(f"    file_path {file_path} is NOT file.")
             target_path = os.path.join(target, file)
-            print(f"    mkdir target_path {target_path}")
             os.mkdir(target_path)
             recursive_copy(file_path, target_path, log_file)
 
@@ -55,6 +109,7 @@ def main():
         os.mkdir(log_path)
 
     clean_copy("static", "public", os.path.join(log_path, log_file))
+    generate_pages_recursive("content", "template.html", "public")
 
 
 if __name__ == "__main__":
