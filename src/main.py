@@ -1,12 +1,12 @@
 import os
-from os.path import isfile
 import shutil
 import re
+import sys
 
 from markdown import markdown_to_html_node, extract_title
 
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, basepath="/"):
     """
     Takes markdown source file from_path and generates html at dest_path using template_path as the template
     """
@@ -23,6 +23,8 @@ def generate_page(from_path, template_path, dest_path):
 
     html = re.sub(r"{{\s*Content\s*}}", content, template)
     html = re.sub(r"{{\s*Title\s*}}", title, html)
+    html = re.sub(r'href="/', f'href="{basepath}', html)
+    html = re.sub(r'src="/', f'src="{basepath}', html)
 
     if not os.path.exists(os.path.dirname(dest_path)):
         os.makedirs(os.path.dirname(dest_path))
@@ -31,7 +33,9 @@ def generate_page(from_path, template_path, dest_path):
         f.write(html)
 
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(
+    dir_path_content, template_path, dest_dir_path, basepath="/"
+):
     print(
         f"generate_pages_recursive({dir_path_content}, {template_path}, {dest_dir_path})"
     )
@@ -50,7 +54,7 @@ def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
         if os.path.isfile(source):
             print("    is a file")
             dest = os.path.join(dest_dir_path, re.sub(r"\.md$", ".html", file))
-            generate_page(source, template_path, dest)
+            generate_page(source, template_path, dest, basepath)
             continue
         else:
             print("    is a directory")
@@ -60,6 +64,7 @@ def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
                 source,
                 template_path,
                 dest,
+                basepath,
             )
 
 
@@ -102,6 +107,7 @@ def recursive_copy(source, target, log_file=None):
 
 
 def main():
+    basepath = sys.argv[1] if len(sys.argv) > 1 else "/"
     log_path = "logs"
     log_file = "static.log"
 
@@ -109,7 +115,7 @@ def main():
         os.mkdir(log_path)
 
     clean_copy("static", "public", os.path.join(log_path, log_file))
-    generate_pages_recursive("content", "template.html", "public")
+    generate_pages_recursive("content", "template.html", "public", basepath)
 
 
 if __name__ == "__main__":
