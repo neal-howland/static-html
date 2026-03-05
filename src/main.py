@@ -114,8 +114,8 @@ def main():
     if not os.path.exists(log_path):
         os.mkdir(log_path)
 
-    clean_copy("static", "public", os.path.join(log_path, log_file))
-    generate_pages_recursive("content", "template.html", "public", basepath)
+    clean_copy("static", "docs", os.path.join(log_path, log_file))
+    generate_pages_recursive("content", "template.html", "docs", basepath)
 
 
 if __name__ == "__main__":
